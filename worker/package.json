@@ -1,0 +1,12 @@
+{
+  "name": "swarm-router-worker",
+  "version": "1.0.0",
+  "description": "SwarmRouter Intelligence Objects API — open source",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "license": "MIT"
+}

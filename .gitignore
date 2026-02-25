@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Training outputs
+models/
+outputs/
+*.pt
+*.bin
+*.safetensors
+*.gguf
+
+# Data
+data/*.jsonl
+data/test_samples.jsonl
+data/swarmcre_dataset/output/
+data/swarmcre_dataset/.progress_*
+
+# Worker
+worker/node_modules/
+worker/cf-api-token
+.wrangler/
+
+# Logs
+*.log
+trainer_log.jsonl
+training.log
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+*.key

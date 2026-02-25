@@ -1,0 +1,154 @@
+# ═══════════════════════════════════════════════════════════════════
+# SwarmCRE-32B Training Configuration
+# QLoRA fine-tuning of Qwen3.5-35B-A3B (MoE: 35B total / 3B active)
+# Target hardware: NVIDIA RTX 6000 Blackwell (48GB GDDR7)
+# ═══════════════════════════════════════════════════════════════════
+#
+# Model family:
+#   SwarmCRE-32B  → Qwen3.5-35B-A3B  (MoE, this config)
+#   SwarmCRE-14B  → Qwen3.5-27B      (dense, see train_27b.yaml)
+#   SwarmCRE-8B   → distilled from 35B-A3B
+#   SwarmCRE-4B   → distilled from 8B
+#
+# Architecture notes (Qwen3.5-35B-A3B):
+#   - 40 layers, hidden_dim=2048
+#   - 256 experts, 8 routed + 1 shared per token (3B active)
+#   - 3:1 Gated DeltaNet to Full Attention ratio
+#   - Native 262K context, extensible to 1M with YaRN
+#   - Thinking mode with <think>...</think> blocks
+#
+# RTX 6000 Blackwell (48GB) memory budget:
+#   - 35B params in NF4 = ~17.5GB weights
+#   - LoRA adapters (r=64) = ~0.5GB
+#   - Optimizer states = ~2GB (paged AdamW 8-bit)
+#   - Activations + KV cache (8192 ctx) = ~12GB with grad ckpt
+#   - Overhead = ~4GB
+#   - Total = ~36GB / 48GB available (~75% utilization)
+# ═══════════════════════════════════════════════════════════════════
+
+# Model configuration
+model:
+  base_model: "Qwen/Qwen3.5-35B-A3B"
+  output_dir: "./models/swarmcre-32b-v1"
+  load_in_4bit: true
+  bnb_4bit_compute_dtype: "bfloat16"
+  bnb_4bit_quant_type: "nf4"
+  bnb_4bit_use_double_quant: true
+
+# LoRA configuration
+# Higher rank (64) for domain specialization — CRE underwriting math,
+# 1031 exchange logic, and structured extraction need more adapter capacity
+# than simple routing.
+#
+# MoE-aware target modules:
+#   - Standard attention: q_proj, k_proj, v_proj, o_proj
+#   - MoE expert FFNs: gate_proj, up_proj, down_proj (applied per-expert)
+#   - MoE router: shared_expert_gate (routes tokens to experts)
+#
+# NOTE: DeltaNet layers use linear attention with separate projections.
+# Unsloth/PEFT will auto-detect trainable modules from the model architecture.
+# If DeltaNet-specific projections are exposed (e.g. deltanet_q_proj),
+# add them to target_modules manually.
+lora:
+  r: 64
+  lora_alpha: 32
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+  lora_dropout: 0.0  # MoE ParamWrapper requires dropout=0
+  bias: "none"
+  task_type: "CAUSAL_LM"
+  # MoE-specific: apply LoRA to all experts (not just shared)
+  modules_to_save: null
+
+# Training configuration
+training:
+  # Dataset — 881K SwarmCRE factory + 3K eval
+  train_dataset: "./data/swarmcre_dataset/output/swarmcre_train.jsonl"
+  eval_dataset: "./data/swarmcre_dataset/output/eval_gold_2k.jsonl"
+  max_seq_length: 8192
+
+  # Optimization
+  # 881K samples x 3 epochs = 2.64M training examples
+  # Effective batch = 2 x 16 = 32
+  # ~82,500 steps per epoch, ~247,500 total
+  num_train_epochs: 3
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 16  # Effective batch size = 32
+  gradient_checkpointing: true
+
+  # Learning rate — lower than router training (2e-4)
+  # MoE models are sensitive to LR; domain fine-tuning benefits from
+  # conservative rate to preserve expert routing learned during pretraining
+  learning_rate: 5.0e-5
+  lr_scheduler_type: "cosine"
+  warmup_ratio: 0.03
+  warmup_steps: 500
+
+  # Optimizer — 8-bit paged AdamW saves ~50% optimizer memory
+  optim: "paged_adamw_8bit"
+  weight_decay: 0.01
+  max_grad_norm: 1.0
+
+  # Logging and evaluation
+  logging_steps: 25
+  eval_strategy: "steps"
+  eval_steps: 2500
+  save_strategy: "steps"
+  save_steps: 2500
+  save_total_limit: 5
+
+  # Precision
+  fp16: false
+  bf16: true
+  seed: 42
+
+  # Efficiency
+  group_by_length: true
+  dataloader_num_workers: 4
+  dataloader_pin_memory: true
+
+  # Packing — pack multiple short sequences into one 8192-token block
+  # Increases GPU utilization significantly for variable-length CRE tasks
+  packing: true
+  neftune_noise_alpha: 5.0  # NEFTune: small embedding noise improves generalization
+
+# Generation (for evaluation)
+generation:
+  max_new_tokens: 4096  # CRE tasks produce longer outputs (IC memos, full underwriting)
+  temperature: 1.0      # Qwen3.5 thinking mode default
+  top_p: 0.95
+  top_k: 20
+  min_p: 0.0
+  do_sample: true
+  repetition_penalty: 1.0
+  presence_penalty: 1.5
+
+# Hardware — RTX 6000 Blackwell
+hardware:
+  device_map: "auto"
+  max_memory:
+    "0": "45GiB"   # Leave 3GB headroom on 48GB card
+  torch_dtype: "bfloat16"
+  # Blackwell supports FP4 natively — NF4 quantization runs at hardware speed
+  # Flash Attention 3 with Blackwell tensor cores
+  attn_implementation: "flash_attention_2"
+
+# Experiment tracking
+wandb:
+  enabled: true
+  project: "swarmcre"
+  name: "swarmcre-32b-v1-qwen35-35b-a3b"
+  entity: null
+  tags:
+    - "swarmcre"
+    - "qwen3.5"
+    - "moe"
+    - "cre"
+    - "rtx6000-blackwell"
