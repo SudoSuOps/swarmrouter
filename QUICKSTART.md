@@ -10,21 +10,22 @@ This guide will get you from zero to trained router in 30 minutes.
 - 1x RTX 3090 (24GB) minimum or RTX PRO 6000 (96GB) recommended
 - 50GB free disk space
 
-## Step 1: Install Dependencies (5 minutes)
+## Step 1: Install Dependencies (1 minute)
 
 ```bash
 cd /home/swarm/Desktop/swarmrouter
 
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install dependencies
-pip install --upgrade pip
-pip install -r requirements.txt
+# Sync lightweight deps (API, CLI, data tools)
+uv sync
+
+# For GPU training rigs (swarmrails, whale):
+uv sync --group train
 
 # Verify setup
-python3 test_setup.py
+uv run python3 test_setup.py
 ```
 
 **Expected output**: "✅ All tests passed! SwarmRouter is ready."
@@ -177,8 +178,8 @@ ollama run swarmrouter "What are the symptoms of COVID-19?"
 
 ### "Module not found" errors
 ```bash
-source venv/bin/activate
-pip install -r requirements.txt
+uv sync          # lightweight
+uv sync --group train  # ML training deps
 ```
 
 ### Training stuck or slow

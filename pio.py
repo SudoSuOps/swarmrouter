@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = ["httpx>=0.24"]
+# requires-python = ">=3.11"
+# ///
 """
 Property Intelligence Object (PIO) — v0.1
 ==========================================
@@ -37,11 +41,7 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass, field, asdict
 from typing import Optional
 
-try:
-    import httpx
-except ImportError:
-    import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "httpx", "-q"])
+import httpx
     import httpx
 
 

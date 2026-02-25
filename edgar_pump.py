@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = ["httpx>=0.24"]
+# requires-python = ">=3.11"
+# ///
 """
 EDGAR Event Pump — Feed SEC Filings Through the Event Machine
 ==============================================================
@@ -35,11 +39,7 @@ import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 
-try:
-    import httpx
-except ImportError:
-    import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "httpx", "-q"])
+import httpx
     import httpx
 
 logging.basicConfig(
