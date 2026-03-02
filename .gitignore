@@ -7,9 +7,9 @@ __pycache__/
 venv/
 env/
 ENV/
-.venv
+.venv/
 
-# Training outputs
+# Training outputs (weights stay in R2 + NAS, not git)
 models/
 outputs/
 *.pt
@@ -17,11 +17,21 @@ outputs/
 *.safetensors
 *.gguf
 
-# Data
+# Raw generated data (large, tracked in R2 not git)
 data/*.jsonl
 data/test_samples.jsonl
 data/swarmcre_dataset/output/
 data/swarmcre_dataset/.progress_*
+data/router_v3/output/
+data/audit_output/
+
+# Sealed build DATA files (JSONL too large — on R2 + SHA256 verifiable)
+# Manifests + SHA256SUMS ARE committed (provenance records)
+data/router_v3/builds/**/*.jsonl
+
+# Promoted + stale raw data dumps
+aviation_promoted/
+data/keeper/
 
 # Worker
 worker/node_modules/
@@ -32,6 +42,9 @@ worker/cf-api-token
 *.log
 trainer_log.jsonl
 training.log
+
+# Unsloth cache
+unsloth_compiled_cache/
 
 # IDEs
 .vscode/
@@ -47,3 +60,4 @@ Thumbs.db
 # Secrets
 .env
 *.key
+*.env.*

@@ -1,0 +1,58 @@
+{
+  "build_id": "swarmrouter-4b0-v1-20260302_180342",
+  "model_name": "swarmrouter-4b0",
+  "version": "v1",
+  "sealed_at": "2026-03-02T18:03:42.966905Z",
+  "train": {
+    "file": "swarmrouter-4b0-v1-20260302_180342_train.jsonl",
+    "pairs": 68179,
+    "sha256": "d60772d5db2408823c638e69de928b4266a18ae0f5989ff52647f16063f8770c",
+    "r2_key": "swarmrouter-4b0/swarmrouter-4b0-v1-20260302_180342/train.jsonl"
+  },
+  "eval": {
+    "file": "swarmrouter-4b0-v1-20260302_180342_eval.jsonl",
+    "pairs": 1970,
+    "sha256": "aa87ef6bd3d4cedc63ae3243806a09a42e33ae9de8c35cdd7c94a131fa86a820",
+    "r2_key": "swarmrouter-4b0/swarmrouter-4b0-v1-20260302_180342/eval.jsonl"
+  },
+  "domain_dist": {
+    "financial": 1289,
+    "technical": 7978,
+    "legal": 5208,
+    "medical": 12898,
+    "cre": 16178,
+    "business": 6338,
+    "pharma": 5486,
+    "judge": 6472,
+    "safety": 6332
+  },
+  "model_dist": {
+    "swarmjudge-27b": 8050,
+    "router-4b": 13636,
+    "research-8b": 7150,
+    "med-14b": 12665,
+    "swarmcre-35b": 14559,
+    "swarmpharma-35b": 5490,
+    "swarmresearch-32b": 6629
+  },
+  "stream_dist": {
+    "judge": 7424,
+    "vetted_harvest": 29419,
+    "platinum_medical": 8375,
+    "swarmcre_dataset": 16148,
+    "v2_router_60k": 3298,
+    "pharma": 3515
+  },
+  "complexity": {
+    "medium": 30464,
+    "high": 28168,
+    "low": 9547
+  },
+  "hard_rule_violations": {
+    "hard rule violation: pharma \u2192 swarmjudge-27b (must be swarmpharma-35b)": 880,
+    "hard rule violation: safety \u2192 router-4b (must be swarmresearch-32b)": 6
+  },
+  "rejection_reasons": {
+    "hard rule violation": 886
+  }
+}
