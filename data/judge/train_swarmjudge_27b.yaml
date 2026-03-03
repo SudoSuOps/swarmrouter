@@ -1,0 +1,118 @@
+# SwarmJudge-27B v1 Training Config
+# ====================================
+# Base: Qwen3.5-27B-A3B (MoE, 27B total, ~3B active params)
+# Method: bf16 LoRA r=64 alpha=32 (NOT QLoRA — full precision on 96GB Blackwell)
+# GPU: RTX PRO 6000 Blackwell (96GB) — SINGLE GPU (GPU 0)
+# Data: ~100K curated judge pairs (trajectory + agent trace + judge eval)
+# Target: 3 epochs, eval every 500 steps
+#
+# Launch:
+#   ssh swarmrails "cd /data2/swarmjudge_27b_data && \
+#       nohup bash -c 'CUDA_VISIBLE_DEVICES=0 CUDA_DEVICE_ORDER=PCI_BUS_ID \
+#       WANDB_MODE=disabled python3 train_swarmjudge_27b.py' \
+#       > /data2/swarmjudge-27b/train.log 2>&1 &"
+
+model:
+  base_model: Qwen/Qwen3.5-27B-A3B
+  model_name: SwarmJudge-27B-v1
+  architecture: MoE (27B total, ~3B active params)
+  output_dir: /data2/swarmjudge-27b
+  load_in_4bit: false
+
+data:
+  data_dir: /data2/swarmjudge_27b_data
+  train_dataset: /data2/swarmjudge_27b_data/swarmjudge_27b_train.jsonl
+  eval_dataset: /data2/swarmjudge_27b_data/swarmjudge_27b_eval.jsonl
+  assembler: data/judge/assemble_swarmjudge_27b.py
+
+lora:
+  r: 64
+  lora_alpha: 32
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+  lora_dropout: 0.0
+  bias: none
+  task_type: CAUSAL_LM
+  modules_to_save: null
+
+training:
+  max_seq_length: 8192
+  num_train_epochs: 3
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 1
+  gradient_accumulation_steps: 16
+  # effective_batch_size: 32
+  gradient_checkpointing: true
+  learning_rate: 5.0e-05
+  lr_scheduler_type: cosine
+  warmup_ratio: 0.03
+  optim: adamw_torch
+  weight_decay: 0.01
+  max_grad_norm: 1.0
+  logging_steps: 10
+  eval_strategy: steps
+  eval_steps: 500
+  save_strategy: steps
+  save_steps: 500
+  save_total_limit: 5
+  fp16: false
+  bf16: true
+  seed: 42
+  dataloader_num_workers: 4
+  dataloader_pin_memory: true
+  packing: true
+  neftune_noise_alpha: 5.0
+  report_to: none
+
+generation:
+  max_new_tokens: 4096
+  temperature: 1.0
+  top_p: 0.95
+  top_k: 20
+  min_p: 0.0
+  do_sample: true
+  repetition_penalty: 1.0
+  presence_penalty: 1.5
+
+hardware:
+  gpu: RTX PRO 6000 Blackwell (96GB)
+  device_map: null
+  max_memory:
+    '0': 94GiB
+  torch_dtype: bfloat16
+  attn_implementation: flash_attention_2
+  cuda_visible_devices: '0'
+  cuda_device_order: PCI_BUS_ID
+
+merge:
+  save_method: merged_16bit
+  output_dir: /data2/swarmjudge-27b/merged
+
+gguf:
+  enabled: true
+  llama_cpp_dir: /home/swarm/llama.cpp
+  quantization: Q4_K_M
+  output_dir: /data2/swarmjudge-27b/gguf
+  output_name: swarmjudge-27b-v1-q4_k_m.gguf
+
+wandb:
+  enabled: false
+  # WANDB_MODE=disabled in environment
+
+provenance:
+  training_script: data/judge/train_swarmjudge_27b.py
+  config_file: data/judge/train_swarmjudge_27b.yaml
+  assembler: data/judge/assemble_swarmjudge_27b.py
+  parent_model: SwarmJudge-14B-v1
+  data_sources:
+    - trajectory cook (medical + aviation CoVe verdicts)
+    - agent trace cook (agent archetypes + failure modes)
+    - judge eval cook (RAG + multi-agent + code + safety)
+  curation_strategy: extremes only (skip ambiguous middle)
+  pass_fail_target: 55/45
